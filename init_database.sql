@@ -72,3 +72,5 @@ CREATE INDEX idx_comments_user_id ON comments(user_id);
 CREATE INDEX idx_comments_post_id ON comments(post_id);
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_activities_user_id ON activities(user_id);
+CREATE INDEX idx_activities_created_id 
+ON activities(created_at DESC, id DESC);
