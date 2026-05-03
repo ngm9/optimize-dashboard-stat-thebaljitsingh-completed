@@ -10,16 +10,25 @@ def get_stats():
     conn = get_connection()
     cur = conn.cursor()
     try:
-        users = cur.execute("SELECT * FROM users"); users_count = len(cur.fetchall())
-        posts = cur.execute("SELECT * FROM posts"); posts_count = len(cur.fetchall())
-        comments = cur.execute("SELECT * FROM comments"); comments_count = len(cur.fetchall())
-        sessions = cur.execute("SELECT * FROM sessions"); sessions_count = len(cur.fetchall())
+        cur.execute("SELECT COUNT(*) FROM users")
+        users_count = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(*) FROM posts")
+        posts_count = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(*) FROM comments")
+        comments_count = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(*) FROM sessions")
+        sessions_count = cur.fetchone()[0]
+
         return {
             "users": users_count,
             "posts": posts_count,
             "comments": comments_count,
             "sessions": sessions_count
         }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
@@ -27,16 +36,47 @@ def get_stats():
         put_connection(conn)
 
 @router.get("/recent-activity", response_model=ActivityListResponse)
-def recent_activity(offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100)):
+def recent_activity(
+    last_created_at: Optional[str] = None,
+    last_id: Optional[int] = None,
+    limit: int = Query(50, ge=1, le=100)
+):
     conn = get_connection()
     cur = conn.cursor()
+
     try:
-        cur.execute(f"SELECT id, user_id, action, created_at FROM activities ORDER BY created_at DESC, id DESC OFFSET {offset} LIMIT {limit}")
+        if last_created_at and last_id:
+            query = """
+                SELECT id, user_id, action, created_at
+                FROM activities
+                WHERE (created_at, id) < (%s, %s)
+                ORDER BY created_at DESC, id DESC
+                LIMIT %s
+            """
+            cur.execute(query, (last_created_at, last_id, limit))
+        else:
+            query = """
+                SELECT id, user_id, action, created_at
+                FROM activities
+                ORDER BY created_at DESC, id DESC
+                LIMIT %s
+            """
+            cur.execute(query, (limit,))
+
         rows = cur.fetchall()
+
         activities = [
-            {"id": row[0], "user_id": row[1], "action": row[2], "created_at": row[3].isoformat()} for row in rows
+            {
+                "id": row[0],
+                "user_id": row[1],
+                "action": row[2],
+                "created_at": row[3].isoformat()
+            }
+            for row in rows
         ]
+
         return {"activities": activities}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
