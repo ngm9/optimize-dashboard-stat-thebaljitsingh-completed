@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from app.database import get_connection, put_connection
 from app.schemas.schemas import StatsResponse, ActivityItem, ActivityListResponse
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/api/dashboard")
 
